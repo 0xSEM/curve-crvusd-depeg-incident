@@ -16,7 +16,8 @@ TARGET = CURVE_DAO_OWNERSHIP
 
 
 def main():
-    sem = accounts.load('sem')
+    # sem = accounts.load('sem')
+    sem = accounts.at('0x989AEb4d175e16225E39E87d0D97A3360524AD80', force=True)
     vest_splitter = sem.deploy(VestSplitter, CRV)
 
     # Loss data
@@ -35,6 +36,19 @@ def main():
 
     id = propose_vote(vest_splitter.address, crv_amount, sem)
     print(f'Proposal id: {id} started')
+
+    # Simulate vote
+    from brownie import chain
+    convex = '0x989AEb4d175e16225E39E87d0D97A3360524AD80'
+    aragon = Contract(TARGET["voting"])
+
+    
+    aragon.vote(id, True, False,{'from': convex})
+    chain.sleep(86400 * 7)
+    chain.mine()
+    tx =aragon.executeVote(id, {'from':sem})
+    assert 
+    assert False
 
 def propose_vote(vest_splitter, crv_amount, sem):
     import json, requests, os
