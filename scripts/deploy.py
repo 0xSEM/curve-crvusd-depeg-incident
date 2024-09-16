@@ -1,6 +1,7 @@
 from brownie import accounts, Contract,VestSplitter
 import pandas as pd
 
+VESTING_FACTORY = '0xe3997288987E6297Ad550A69B31439504F513267'
 CRV = '0xD533a949740bb3306d119CC777fa900bA034cd52'
 CRV_PRICE = 0.2846
 DESCRIPTION = "Compensation for victims of the June 12th crvUSD de-peg incident"
@@ -16,8 +17,8 @@ TARGET = CURVE_DAO_OWNERSHIP
 
 
 def main():
-    # sem = accounts.load('sem')
-    sem = accounts.at('0x989AEb4d175e16225E39E87d0D97A3360524AD80', force=True)
+    # sem = accounts.load('sem') # Use this for real run
+    sem = accounts.at('0x989AEb4d175e16225E39E87d0D97A3360524AD80', force=True) # Use this for testing
     vest_splitter = sem.deploy(VestSplitter, CRV)
 
     # Loss data
@@ -34,21 +35,13 @@ def main():
     vest_splitter.save_distribution(users, fractions, {'from': sem})
     vest_splitter.finalize_distribution({'from': sem})
 
+    # Propose vote
     id = propose_vote(vest_splitter.address, crv_amount, sem)
     print(f'Proposal id: {id} started')
 
-    # Simulate vote
-    from brownie import chain
-    convex = '0x989AEb4d175e16225E39E87d0D97A3360524AD80'
-    aragon = Contract(TARGET["voting"])
+    # Simulate vote to ensure it all works. For testing only. Should comment this out when running on chain.
+    simulate_vote(id)
 
-    
-    aragon.vote(id, True, False,{'from': convex})
-    chain.sleep(86400 * 7)
-    chain.mine()
-    tx =aragon.executeVote(id, {'from':sem})
-    assert 
-    assert False
 
 def propose_vote(vest_splitter, crv_amount, sem):
     import json, requests, os
@@ -73,7 +66,7 @@ def prepare_evm_script(vest_splitter, crv_amount):
     # gauge controller, ...
     ACTIONS = [
         (
-            '0xe3997288987E6297Ad550A69B31439504F513267', # Vesting Factory
+            VESTING_FACTORY, # Vesting Factory
             'deploy_vesting_contract', 
             CRV, # token
             vest_splitter,  # splitter
@@ -92,3 +85,14 @@ def prepare_evm_script(vest_splitter, crv_amount):
         evm_script = f"{evm_script}{agent.address[2:]}{length}{agent_calldata}"
 
     return evm_script
+
+def simulate_vote(id):
+    from brownie import chain
+    convex = '0x989AEb4d175e16225E39E87d0D97A3360524AD80'
+    aragon = Contract(TARGET["voting"])
+    aragon.vote(id, True, False,{'from': convex})
+    chain.sleep(86400 * 7)
+    chain.mine()
+    tx = aragon.executeVote(id, {'from':convex})
+
+    assert 'Fund' in tx.events
