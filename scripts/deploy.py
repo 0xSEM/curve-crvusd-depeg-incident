@@ -19,9 +19,8 @@ TARGET = CURVE_DAO_OWNERSHIP
 def main():
     # sem = accounts.load('sem') # Use this for real run
     sem = accounts.at('0x989AEb4d175e16225E39E87d0D97A3360524AD80', force=True) # Use this for testing
-    vest_splitter = sem.deploy(VestSplitter, CRV)
 
-    # Loss data
+    # Prepare data
     users = []
     fractions = []
     df = pd.read_csv('user_losses.csv', header=None, names=['address', 'loss'])
@@ -32,10 +31,12 @@ def main():
         users.append(item)
         fractions.append(user_losses[item] * 10 ** 18)
 
+    # 3 Setup transactions
+    vest_splitter = sem.deploy(VestSplitter, CRV)
     vest_splitter.save_distribution(users, fractions, {'from': sem})
     vest_splitter.finalize_distribution({'from': sem})
 
-    # Propose vote
+    # Propose vote to fund the vesting contract
     id = propose_vote(vest_splitter.address, crv_amount, sem)
     print(f'Proposal id: {id} started')
 
