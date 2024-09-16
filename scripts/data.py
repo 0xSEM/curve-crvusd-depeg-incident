@@ -1,6 +1,6 @@
 import pandas as pd
 from brownie import Contract, VestSplitter
-
+import csv
 # Estimated start and endblocks for crvUSD depeg
 DEPLOY_BLOCK = 19999153
 START_BLOCK = 20080100
@@ -9,7 +9,18 @@ crvusd_controller = Contract('0xB536FEa3a01c95Dd09932440eC802A75410139D6')
 susde = Contract('0x9D39A5DE30e57443BfF2A8307A4256c8797A3497')
 
 def main():
-    losses = compute_losses()
+    losses, sum = compute_losses()
+    print(f'total loss: {sum}')
+    write_to_csv(losses, 'user_losses.csv')
+
+
+def write_to_csv(data, filename):
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        # writer.writerow(['User', 'Loss'])  # Header
+        for user, loss in data.items():
+            writer.writerow([user, loss])
+
 
 def get_affected_users():
     logs = crvusd_controller.events.Borrow.get_logs(fromBlock=DEPLOY_BLOCK, toBlock=END_BLOCK)
@@ -63,11 +74,13 @@ def compute_losses():
 
 
     df = pd.DataFrame(loss_data)
-    print(f'approx total loss: {df["approx_loss"].sum()}')
+    print(f'approx total loss: {sum}')
     print(df)
 
     # Trim to only include users with losses > 0
-    return {data['user']: data['approx_loss'] for data in loss_data if data['approx_loss'] > 0}
+    losses = {data['user']: data['approx_loss'] for data in loss_data if data['approx_loss'] > 0}
+    return losses, sum(losses.values())
+
 
 if __name__ == "__main__":
     compute_losses()
