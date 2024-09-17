@@ -1,4 +1,5 @@
-from brownie import Contract, chain
+import brownie
+from brownie import Contract, chain, ZERO_ADDRESS
 import pytest
 
 CRV_PRICE = 0.2846 # Price taken from governance proposal here: https://gov.curve.fi/t/curve-grant-compensation-for-affected-users-of-the-june-12th-crvusd-de-peg-incident/10182
@@ -24,8 +25,11 @@ def test_ops(admin, factory, vest_splitter, dev, crv, user_losses):
         {'from': admin}
     )
 
-    
-    vest_splitter.set_vest(tx.return_value, {'from': dev})
+    new_vest = tx.return_value
+    vest_splitter.set_vest(new_vest, {'from': dev})
+    with brownie.reverts():
+        vest_splitter.set_vest(ZERO_ADDRESS, {'from': dev})
+    vest_splitter.set_vest(new_vest, {'from': admin})
     vest_splitter.save_distribution(users, fractions, {'from': dev})
     vest_splitter.finalize_distribution({'from': dev})
 

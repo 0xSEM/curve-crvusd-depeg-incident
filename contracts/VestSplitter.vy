@@ -23,6 +23,7 @@ event Claim:
 TOKEN: public(immutable(ERC20))
 vest: public(VestingEscrow)
 ADMIN: public(immutable(address))
+CURVE_GOV: public(constant(address)) = 0x40907540d8a6C65c637785e8f8B742ae6b0b9968 # Ownership agent
 
 fractions: public(HashMap[address, uint256])
 total_fraction: public(uint256)
@@ -41,8 +42,9 @@ def __init__(token: ERC20):
 
 @external
 def set_vest(vest: VestingEscrow):
-    assert msg.sender == ADMIN, "Access"
-    assert self.vest == empty(VestingEscrow), "Vest already set"
+    if msg.sender != CURVE_GOV:
+        assert msg.sender == ADMIN, "Access"
+        assert self.vest == empty(VestingEscrow), "Vest already set"
     self.vest = vest
 
 
